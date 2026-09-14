@@ -1,0 +1,49 @@
+{
+  "name": "dsh-plugin-export-md",
+  "version": "1.0.0",
+  "description": "DSH 插件：用 /export-md 斜杠命令把当前会话日志导出为 Markdown 文档（内容按参数取舍，默认保存到 ~/.dsh/exports/）",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --check index.js && node --check src/index.js && node --check src/render.js && node --check src/options.js && node --check src/export-file.js && node --check src/text.js && node test/run.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ErickYu-code/dsh-plugin-export-md.git"
+  },
+  "homepage": "https://github.com/ErickYu-code/dsh-plugin-export-md#readme",
+  "bugs": {
+    "url": "https://github.com/ErickYu-code/dsh-plugin-export-md/issues"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.1.5-rc.1"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "export",
+    "markdown"
+  ],
+  "license": "MIT"
+}

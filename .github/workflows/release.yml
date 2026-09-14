@@ -1,0 +1,87 @@
+# 推送 v* 标签就自动创建 GitHub Release。
+#
+# 触发方式（二选一）：
+#   1) git tag v1.0.0 && git push origin v1.0.0      ← 推荐，标签先落地再建 Release
+#   2) 在 Actions 页面手动 Run workflow 并填 tag      ← 标签已存在但当时没有本文件时用
+#
+# 说明：
+#   - 发布说明优先用 RELEASE_NOTES/<tag>.md（人工整理）；没有该文件就由 GitHub
+#     按提交历史自动生成。
+#   - --verify-tag 保证标签已存在于远端，避免 Release 指向一个凭空创建的标签。
+#   - 标签格式建议 v1.0.0，与 package.json 的 version 保持一致。
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的标签（必须已经存在于远端），例如 v1.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      # 标签名与包版本不一致会让 `#v1.0.0` 安装到一个声称别的版本号的包。
+      - name: Verify tag matches package.json version
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          tag_version="${TAG#v}"
+          echo "tag=${TAG}  package.json=${pkg_version}"
+          if [ "${tag_version}" != "${pkg_version}" ]; then
+            echo "::error::标签 ${TAG} 与 package.json 的 version ${pkg_version} 不一致，请先对齐再发布"
+            exit 1
+          fi
+
+      # 重发同一个标签（例如改写历史后 force-push 标签）时 Release 已存在，
+      # 直接 create 会以 "release already exists" 失败。先删掉旧 Release 再重建，
+      # 让「重发」变成幂等操作。
+      #
+      # 注意 --cleanup-tag 默认关闭：只删 Release，不动 git 标签 —— 这正是不变量，
+      # 删标签会让后面的 --verify-tag 找不到标签而失败。
+      - name: Delete an existing release for this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "已存在 ${TAG} 的 Release，先删除旧 Release（保留 git 标签）后重建"
+            gh release delete "${TAG}" --yes
+          else
+            echo "${TAG} 尚无 Release，直接创建"
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 用 [ -f ] 判断而不是 glob + nullglob：变量拼出来的 glob 在 bash 里
+          # 不会走 nullglob，未命中时数组里会留下字面量，导致 --notes-file 指向
+          # 不存在的文件而发布失败。
+          notes="RELEASE_NOTES/${TAG}.md"
+          if [ -f "${notes}" ]; then
+            echo "使用人工整理的发布说明：${notes}"
+            gh release create "${TAG}" \
+              --verify-tag \
+              --title "${TAG}" \
+              --notes-file "${notes}"
+          else
+            echo "未找到 RELEASE_NOTES/${TAG}.md，改用自动生成的发布说明"
+            gh release create "${TAG}" \
+              --verify-tag \
+              --title "${TAG}" \
+              --generate-notes
+          fi

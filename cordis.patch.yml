@@ -1,0 +1,6 @@
+# dsh-plugin-export-md bundle patch: one host row over the profile's plugin tree.
+# The row name resolves from the profile's own node_modules, where
+# `dsh plugin --profile web add <path>` installed this package.
+- insert:
+    - id: export-md
+      name: dsh-plugin-export-md

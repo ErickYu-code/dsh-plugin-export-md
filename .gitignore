@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# dependencies — the plugin itself has none, but local poking may create them
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# local export scratch space used by tests / manual runs
+.e2e-home/
+exports/
+
+# editor / tooling
+.idea/
+.vscode/
+*.log
+
+# maintainer-only release / git-identity runbook — local notes, never published
+/docs/RELEASING.md
